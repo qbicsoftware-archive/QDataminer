@@ -4,6 +4,7 @@ import javax.servlet.annotation.WebServlet;
 
 import com.vaadin.annotations.Theme;
 import com.vaadin.annotations.VaadinServletConfiguration;
+import com.vaadin.data.util.BeanItemContainer;
 import com.vaadin.server.VaadinRequest;
 import com.vaadin.server.VaadinServlet;
 import com.vaadin.ui.Button;
@@ -11,9 +12,14 @@ import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.Button.ClickEvent;
 import com.vaadin.ui.Label;
 import com.vaadin.ui.Table;
+import com.vaadin.ui.Tree;
 import com.vaadin.ui.Grid;
+import com.vaadin.ui.Grid.SelectionMode;
 import com.vaadin.ui.UI;
 import com.vaadin.ui.VerticalLayout;
+
+import backend.Alternative;
+
 import com.vaadin.shared.ui.grid.HeightMode;
 
 import org.elasticsearch.action.get.GetResponse;
@@ -22,8 +28,11 @@ import org.elasticsearch.common.settings.*;
 import org.elasticsearch.node.Node;
 import static org.elasticsearch.node.NodeBuilder.*;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import org.json.*;
 
@@ -55,6 +64,27 @@ public class QdataminerUI extends UI {
 		String ext_id = json_result.getString("ID");
 		String ref_base = json_result.getString("Reference_bases");
 		
+		Tree variant_info_tree = new Tree("Variant Data");
+		variant_info_tree.addItem("Details");
+		variant_info_tree.addItem("Variant ID: " + variant_id);
+		variant_info_tree.addItem("Chromosome: " + chromosome);
+		variant_info_tree.addItem("Position: " + position);
+		variant_info_tree.addItem("External ID: " + ext_id);
+		variant_info_tree.addItem("Reference base: " + ref_base);
+		variant_info_tree.addItem("Additional Information");
+		variant_info_tree.setParent("Variant ID: " + variant_id, "Details");
+		variant_info_tree.setParent("Chromosome: " + chromosome, "Details");
+		variant_info_tree.setParent("Position: " + position, "Details");
+		variant_info_tree.setParent("External ID: " + ext_id, "Details");
+		variant_info_tree.setParent("Reference base: " + ref_base, "Details");	
+		variant_info_tree.setChildrenAllowed("Variant ID: " + variant_id, false);
+		variant_info_tree.setChildrenAllowed("Chromosome: " + chromosome, false);
+		variant_info_tree.setChildrenAllowed("Position: " + position, false);
+		variant_info_tree.setChildrenAllowed("External ID: " + ext_id, false);
+		variant_info_tree.setChildrenAllowed("Reference base: " + ref_base, false);
+		variant_info_tree.expandItem("Details");
+		
+		
 		Table variant_info_table = new Table("Additional Information");
 		variant_info_table.addContainerProperty("Field", String.class, null);
 		variant_info_table.addContainerProperty("Value",  String.class, null);
@@ -71,53 +101,41 @@ public class QdataminerUI extends UI {
 		}
 		variant_info_table.setPageLength(variant_info_table.size());
 		variant_info_table.setSortContainerPropertyId("Field");
-		
-		Grid alt_table = new Grid("Alternatives");
-		alt_table.addColumn("Alternate bases", String.class);
-		alt_table.addColumn("Allele frequency (AF)",  Double.class);
-		alt_table.addColumn("AF SAS",  Double.class);
-		alt_table.addColumn("AF EUR",  Double.class);
-		alt_table.addColumn("AF AFR",  Double.class);
-		alt_table.addColumn("AF AMR",  Double.class);
-		alt_table.addColumn("AF EAS",  Double.class);
-		alt_table.addColumn("Allele count",  Long.class);
 
-		// Iterate through the alternatives
+		// Iterate through the alternatives and build container
+		Collection<Alternative> alternatives = new ArrayList<Alternative>();
+		Integer alt_count = 0;
 		if (json_result.has("Alternates")){
 			JSONArray json_alts = json_result.getJSONArray("Alternates");
+			alt_count = json_alts.length();
 			for(int a = 0; a < json_alts.length(); a++) {
 				JSONObject alt = json_alts.getJSONObject(a);
-				alt_table.addRow(alt.getString("Alternate_bases"), 
-						         alt.getDouble("Allele_frequency"), 
-						         alt.getDouble("Allele_frequency_SAS"), 
-						         alt.getDouble("Allele_frequency_EUR"), 
-						         alt.getDouble("Allele_frequency_AFR"), 
-						         alt.getDouble("Allele_frequency_AMR"),
-						         alt.getDouble("Allele_frequency_EAS"),
-						         alt.getLong("Allele_count_in_gt"));
+				alternatives.add(new Alternative(alt, variant_id));
 			}
-			alt_table.setHeightByRows(json_alts.length());
-			alt_table.setHeightMode(HeightMode.ROW);
 		}
+		
+		BeanItemContainer<Alternative> alt_bean = new BeanItemContainer<Alternative>(Alternative.class, alternatives);
+		Grid alt_table = new Grid(alt_bean);
+		alt_table.setCaption("Variant Alternatives");
+		alt_table.setHeightByRows(alt_count);
+		alt_table.setHeightMode(HeightMode.ROW);
+		alt_table.setColumnOrder("alternate_bases", "allele_count");
+		alt_table.removeColumn("variant_id");
+		alt_table.setSelectionMode(SelectionMode.SINGLE);
+		
+		/*
+		 * Build layout
+		 */
 		
 		final VerticalLayout result_main = new VerticalLayout();
 			result_main.setMargin(true);
 			setContent(result_main);
 			
-			final VerticalLayout variant_basis = new VerticalLayout();
-				variant_basis.addComponent(new Label("Variant ID: " + variant_id));
-				variant_basis.addComponent(new Label("Chromosome: " + chromosome));
-				variant_basis.addComponent(new Label("Position: " + position));
-				variant_basis.addComponent(new Label("External ID: " + ext_id));
-				variant_basis.addComponent(new Label("Reference base: " + ref_base));
-				//variant_basis.setMargin(true);
-			
 			final HorizontalLayout variant_info = new HorizontalLayout();
 				variant_info.setWidth("90%");
-				variant_info.addComponent(variant_basis);
+				variant_info.addComponent(variant_info_tree);
 				variant_info.addComponent(variant_info_table);
 				variant_info.addComponent(alt_table);
-				variant_info.setCaption("Variant Details");
 			
 			result_main.addComponent(variant_info);
 		
