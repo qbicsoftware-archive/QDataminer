@@ -4,24 +4,28 @@ import javax.servlet.annotation.WebServlet;
 
 import com.vaadin.annotations.Theme;
 import com.vaadin.annotations.VaadinServletConfiguration;
+import com.vaadin.data.Container.Filter;
 import com.vaadin.data.util.BeanItemContainer;
 import com.vaadin.data.util.filter.SimpleStringFilter;
 import com.vaadin.server.VaadinRequest;
 import com.vaadin.server.VaadinServlet;
+import com.vaadin.ui.Alignment;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.Button.ClickEvent;
 import com.vaadin.ui.Label;
-import com.vaadin.ui.Table;
+import com.vaadin.ui.TabSheet;
 import com.vaadin.ui.Tree;
 import com.vaadin.ui.Grid;
 import com.vaadin.ui.Grid.SelectionMode;
 import com.vaadin.ui.Grid.SingleSelectionModel;
 import com.vaadin.ui.UI;
 import com.vaadin.ui.VerticalLayout;
+import com.vaadin.ui.renderers.HtmlRenderer;
 
 import backend.Alternative;
 import backend.Variant;
+import backend.SnpeffAnnotation;
 
 import com.vaadin.shared.ui.grid.HeightMode;
 
@@ -69,6 +73,7 @@ public class QdataminerUI extends UI {
 		addElementToSpecificBranch(variantInfoTree, var.getPositionWithLabel(), "Details");
 		addElementToSpecificBranch(variantInfoTree, var.getExternalIDWithLabel(), "Details");
 		addElementToSpecificBranch(variantInfoTree, var.getReferenceBasesWithLabel(), "Details");
+		addElementToSpecificBranch(variantInfoTree, var.getVariantTypesWithLabel(), "Details");
 		variantInfoTree.expandItem("Details");
 		
 		variantInfoTree.addItem("Additional Information");
@@ -91,28 +96,61 @@ public class QdataminerUI extends UI {
 		addElementToSpecificBranch(variantInfoTree, var.getCofIntervEndImperciseWithLabel(), "Additional Information");
 		addElementToSpecificBranch(variantInfoTree, var.getSourceWithLabel(), "Additional Information");
 
-		// Iterate through the alternatives and build container
+		// Iterate through the alternatives and build alternatives, snpeffannno containers
 		Collection<Alternative> alternatives = new ArrayList<Alternative>();
-		Integer alt_count = 0;
+		Collection<SnpeffAnnotation> snpeffAnnotations = new ArrayList<SnpeffAnnotation>();
+		Integer altCount = 0;
+		Integer snpeffCount = 0;
 		if (jsonResult.has("Alternates")){
-			JSONArray json_alts = jsonResult.getJSONArray("Alternates");
-			alt_count = json_alts.length();
-			for(int a = 0; a < json_alts.length(); a++) {
-				JSONObject alt = json_alts.getJSONObject(a);
-				alternatives.add(new Alternative(alt, var));
+			JSONArray jsonAlts = jsonResult.getJSONArray("Alternates");
+			altCount = jsonAlts.length();
+			for(int a = 0; a < jsonAlts.length(); a++) {
+				JSONObject jsonAlt = jsonAlts.getJSONObject(a);
+				Alternative alt = new Alternative(jsonAlt, var);
+				alternatives.add(alt);
+				
+				if (jsonAlt.has("SnpEff_annotation")){
+					snpeffCount = 0;
+					JSONArray jsonSnpeffAnnos = jsonAlt.getJSONArray("SnpEff_annotation");
+					snpeffCount = jsonSnpeffAnnos.length();
+					for(int s = 0; s < jsonSnpeffAnnos.length(); s++) {
+						JSONObject jsonSnpeffAnno = jsonSnpeffAnnos.getJSONObject(s);
+						snpeffAnnotations.add(new SnpeffAnnotation(jsonSnpeffAnno, alt)); 
+					}
+				}
+				
 			}
 		}
+		BeanItemContainer<Alternative> altBean = new BeanItemContainer<Alternative>(Alternative.class, alternatives);
+		BeanItemContainer<SnpeffAnnotation> saBean = new BeanItemContainer<SnpeffAnnotation>(SnpeffAnnotation.class, snpeffAnnotations);
 		
-		BeanItemContainer<Alternative> alt_bean = new BeanItemContainer<Alternative>(Alternative.class, alternatives);
-		Grid altTable = new Grid(alt_bean);
+		Grid altTable = new Grid(altBean);
 		altTable.setCaption("Variant Alternatives");
-		altTable.setHeightByRows(alt_count);
+		altTable.setHeightByRows(altCount);
 		altTable.setHeightMode(HeightMode.ROW);
 		altTable.setColumnOrder("alternateBases", "alleleCount");
 		altTable.removeColumn("variant");
 		altTable.setSelectionMode(SelectionMode.SINGLE);
 		altTable.setWidth("100%");
 		
+	    Grid saTable = new Grid(saBean);
+	    saTable.setVisible(false);
+	    saTable.setCaption("SnpEff Annotations");
+	    saTable.setHeightByRows(snpeffCount);
+	    saTable.setHeightMode(HeightMode.ROW);
+	    saTable.setColumnOrder("annotation","annotationImpact","mutation","geneName", "geneID", "featureType", "featureID", "transcriptBiotype");
+	    saTable.getColumn("mutation").setWidth(100);
+	    saTable.getColumn("featureID").setWidth(200);
+	    saTable.removeColumn("alternativeBases");
+	    saTable.removeColumn("alternative");
+	    saTable.setSelectionMode(SelectionMode.NONE);
+	    saTable.setWidth("100%");
+	    saTable.getColumn("featureID").setRenderer(new HtmlRenderer());
+	    saTable.getColumn("geneID").setRenderer(new HtmlRenderer());
+		
+		TabSheet annoSampleTabs = new TabSheet();
+		annoSampleTabs.setVisible(false);
+		annoSampleTabs.setHeight("1000px");
 		/*
 		 * Build layout
 		 */
@@ -120,13 +158,24 @@ public class QdataminerUI extends UI {
 		resultMain.setMargin(true);
 		setContent(resultMain);
 			
-			final HorizontalLayout variantInfoAltBox = new HorizontalLayout();
-				variantInfoAltBox.setWidth("95%");
-				variantInfoAltBox.addComponent(variantInfoTree);
-				variantInfoAltBox.addComponent(altTable);
-				variantInfoAltBox.setExpandRatio(altTable,1);
+			final HorizontalLayout InfoAltAnnoBox = new HorizontalLayout();
 			
-			resultMain.addComponent(variantInfoAltBox);
+				InfoAltAnnoBox.setWidth("100%");
+				InfoAltAnnoBox.addComponent(variantInfoTree);
+				
+				final VerticalLayout altSnpeffBox = new VerticalLayout();
+				altSnpeffBox.setWidth("100%");
+				InfoAltAnnoBox.addComponent(altSnpeffBox);
+				altSnpeffBox.addComponent(altTable);
+				altSnpeffBox.setExpandRatio(altTable,1);
+				annoSampleTabs.addComponent(saTable);
+				
+				InfoAltAnnoBox.setExpandRatio(variantInfoTree, 2);
+				InfoAltAnnoBox.setExpandRatio(altSnpeffBox, 8);
+				
+				altSnpeffBox.addComponent(annoSampleTabs);
+			
+			resultMain.addComponent(InfoAltAnnoBox);
 		
 		//Close node when finished
 		/*
@@ -139,7 +188,13 @@ public class QdataminerUI extends UI {
 			 * Display snpEff-annotations when an alternative is selected
 			 */
 		    Alternative selectedAlt = (Alternative)(((SingleSelectionModel) altTable.getSelectionModel()).getSelectedRow());	
-		    resultMain.addComponent(new Label(selectedAlt.getAlternateBases()));
+		    
+		    Filter altFilter = new SimpleStringFilter("alternativeBases", selectedAlt.getAlternateBases(), true, false);
+		    saBean.removeAllContainerFilters();
+		    saBean.addContainerFilter(altFilter);
+		    saTable.setVisible(true);
+		    
+			annoSampleTabs.setVisible(true);
 		});
 	
 	}

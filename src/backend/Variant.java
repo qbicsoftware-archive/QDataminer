@@ -1,5 +1,6 @@
 package backend;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class Variant {
@@ -14,6 +15,7 @@ public class Variant {
 	private Long position = null;
 	private String externalId = null;
 	private String referenceBases = null;
+	private JSONArray variantTypes = null;
 	
 	// Additional information
 	private Double quality = null;
@@ -43,6 +45,9 @@ public class Variant {
 			this.externalId = var.getString("ID");
 		}
 		this.referenceBases = var.getString("Reference_bases");
+		if (var.has("Variant_type")){
+			this.variantTypes = var.getJSONArray("Variant_type");
+		}	
 		if (var.has("Quality")){
 			this.quality = var.getDouble("Quality");
 		}
@@ -285,5 +290,13 @@ public class Variant {
 	
 	public String getSourceWithLabel() {
 		return "Source: " + source;
+	}
+	
+	public JSONArray getVariantTypes() {
+		return variantTypes;
+	}
+	
+	public String getVariantTypesWithLabel() {
+		return "Variant type(s): " + variantTypes.join(",");
 	}
 }
