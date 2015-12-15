@@ -1,4 +1,4 @@
-package backend;
+package com.qbic.qdataminer.backend;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -297,6 +297,6 @@ public class Variant {
 	}
 	
 	public String getVariantTypesWithLabel() {
-		return "Variant type(s): " + variantTypes.join(",");
+		return "Variant type(s): " + variantTypes.join(",").replaceAll("\"", "");
 	}
 }

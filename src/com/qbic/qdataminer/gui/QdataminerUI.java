@@ -1,6 +1,11 @@
-package com.example.qdataminer;
+package com.qbic.qdataminer.gui;
 
 import javax.servlet.annotation.WebServlet;
+
+import com.qbic.qdataminer.backend.Alternative;
+import com.qbic.qdataminer.backend.SnpeffAnnotation;
+import com.qbic.qdataminer.backend.Variant;
+import com.qbic.qdataminer.backend.Sample;
 
 import com.vaadin.annotations.Theme;
 import com.vaadin.annotations.VaadinServletConfiguration;
@@ -22,11 +27,6 @@ import com.vaadin.ui.Grid.SingleSelectionModel;
 import com.vaadin.ui.UI;
 import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.renderers.HtmlRenderer;
-
-import backend.Alternative;
-import backend.Variant;
-import backend.SnpeffAnnotation;
-
 import com.vaadin.shared.ui.grid.HeightMode;
 
 import org.elasticsearch.action.get.GetResponse;
@@ -37,6 +37,8 @@ import static org.elasticsearch.node.NodeBuilder.*;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Map;
+
 import org.json.*;
 
 @SuppressWarnings("serial")
@@ -50,15 +52,14 @@ public class QdataminerUI extends UI {
 	protected void init(VaadinRequest request) {
 		
 		//Connection to elasticsearch
-		/*
+		
 		getElasticsearchConnection();
 		
-		GetResponse response = esClient.prepareGet("1000genomes_variants", "variants", "Y_14553755_C_G")
+		GetResponse response = esClient.prepareGet("1000genomes_variants", "variants", "Y_2655180_G_A")
 		        .execute()
 		        .actionGet();
 		Map<String, Object> result = response.getSource();
-		*/
-		String result = "{\"_id\":\"Y_2655180_G_A\",\"Total_nr_of_alleles\":1233,\"Number_of_samples\":1233,\"Exon_Pulldown_Target\":true,\"Reference_bases\":\"G\",\"Ancestral_allele\":\"G\",\"Source\":\"1000genomes\",\"Variant_type\":[\"SNP\"],\"Depth_across_samples\":84761,\"Position\":2655180,\"Quality\":100,\"ID\":\"rs11575897\",\"Chromosome\":\"Y\",\"Alternates\":[{\"Samples_Allele1\":[\"HG00530\",\"HG00533\",\"NA18561\",\"NA18563\",\"NA18943\",\"NA18953\",\"NA18962\",\"NA18965\",\"NA18977\",\"NA18985\",\"NA18986\",\"NA18990\",\"NA18994\",\"NA19000\",\"NA19005\",\"NA19007\",\"NA19060\",\"NA19066\",\"NA19067\",\"NA19070\",\"NA19075\",\"NA19088\"],\"Allele_frequency_AFR\":0,\"Allele_frequency_EUR\":0,\"Alternate_bases\":\"A\",\"Allele_count_in_gt\":22,\"SnpEff_annotation\":[{\"CDS_pos_CDS_length\":\"465/615\",\"Mutation\":\"SRY S155S\",\"Feature_Type\":\"transcript\",\"Transcript_BioType\":\"protein_coding\",\"Annotation_Impact\":\"LOW\",\"Gene_ID\":\"ENSG00000184895\",\"HGVS_p\":\"p.Ser155Ser\",\"Feature_ID\":\"ENST00000383070\",\"Rank\":\"1/1\",\"cDNA_pos_cDNA_length\":\"561/845\",\"AA_pos_AA_length\":\"155/204\",\"Annotation\":\"synonymous_variant\",\"Gene_Name\":\"SRY\",\"HGVS_c\":\"c.465C>T\"},{\"CDS_pos_CDS_length\":\"465/591\",\"Mutation\":\"SRY S155S\",\"Feature_Type\":\"transcript\",\"Transcript_BioType\":\"protein_coding\",\"Annotation_Impact\":\"LOW\",\"Gene_ID\":\"ENSG00000184895\",\"HGVS_p\":\"p.Ser155Ser\",\"Feature_ID\":\"ENST00000525526\",\"Rank\":\"1/2\",\"ERRORS_WARNINGS_INFO\":\"WARNING_TRANSCRIPT_NO_STOP_CODON\",\"cDNA_pos_cDNA_length\":\"465/591\",\"AA_pos_AA_length\":\"155/196\",\"Annotation\":\"synonymous_variant\",\"Gene_Name\":\"SRY\",\"HGVS_c\":\"c.465C>T\"},{\"CDS_pos_CDS_length\":\"465/498\",\"Mutation\":\"SRY S155S\",\"Feature_Type\":\"transcript\",\"Transcript_BioType\":\"protein_coding\",\"Annotation_Impact\":\"LOW\",\"Gene_ID\":\"ENSG00000184895\",\"HGVS_p\":\"p.Ser155Ser\",\"Feature_ID\":\"ENST00000534739\",\"Rank\":\"1/2\",\"cDNA_pos_cDNA_length\":\"465/498\",\"AA_pos_AA_length\":\"155/165\",\"Annotation\":\"synonymous_variant\",\"Gene_Name\":\"SRY\",\"HGVS_c\":\"c.465C>T\"},{\"Feature_Type\":\"region_of_interest:Necessary_for_interaction_with_ZNF208_isoform_KRAB-O\",\"Transcript_BioType\":\"protein_coding\",\"Annotation_Impact\":\"LOW\",\"Gene_ID\":\"ENSG00000184895\",\"Feature_ID\":\"ENST00000383070\",\"HGVS_c\":\"c.465C>T\",\"Annotation\":\"sequence_feature\",\"Gene_Name\":\"SRY\"},{\"Distance\":\"2688\",\"Feature_Type\":\"transcript\",\"Transcript_BioType\":\"processed_pseudogene\",\"Annotation_Impact\":\"MODIFIER\",\"Gene_ID\":\"ENSG00000237659\",\"Feature_ID\":\"ENST00000454281\",\"HGVS_c\":\"n.-2688G>A\",\"Annotation\":\"upstream_gene_variant\",\"Gene_Name\":\"RNASEH2CP1\"},{\"Distance\":\"2286\",\"Feature_Type\":\"transcript\",\"Transcript_BioType\":\"snRNA\",\"Annotation_Impact\":\"MODIFIER\",\"Gene_ID\":\"ENSG00000251841\",\"Feature_ID\":\"ENST00000516032\",\"HGVS_c\":\"n.*2286G>A\",\"Annotation\":\"downstream_gene_variant\",\"Gene_Name\":\"RNU6-1334P\"}],\"Allele_frequency_EAS\":0.0902,\"Allele_frequency_AMR\":0,\"Allele_frequency\":0.0178427,\"Allele_frequency_SAS\":0}]}";
+		
 		JSONObject jsonResult = new JSONObject(result);
 		Variant var = new Variant(jsonResult);
 		
@@ -99,6 +100,7 @@ public class QdataminerUI extends UI {
 		// Iterate through the alternatives and build alternatives, snpeffannno containers
 		Collection<Alternative> alternatives = new ArrayList<Alternative>();
 		Collection<SnpeffAnnotation> snpeffAnnotations = new ArrayList<SnpeffAnnotation>();
+		Collection<Sample> samplesA1 = new ArrayList<Sample>();
 		Integer altCount = 0;
 		Integer snpeffCount = 0;
 		if (jsonResult.has("Alternates")){
@@ -109,6 +111,7 @@ public class QdataminerUI extends UI {
 				Alternative alt = new Alternative(jsonAlt, var);
 				alternatives.add(alt);
 				
+				// Parse annotations
 				if (jsonAlt.has("SnpEff_annotation")){
 					snpeffCount = 0;
 					JSONArray jsonSnpeffAnnos = jsonAlt.getJSONArray("SnpEff_annotation");
@@ -118,14 +121,29 @@ public class QdataminerUI extends UI {
 						snpeffAnnotations.add(new SnpeffAnnotation(jsonSnpeffAnno, alt)); 
 					}
 				}
-				
+				// Parse samples
+				if (jsonAlt.has("Samples_Allele1")){
+					JSONArray jsonSamplesA1 = jsonAlt.getJSONArray("Samples_Allele1");
+					for(int a1 = 0; a1 < jsonSamplesA1.length(); a1++) {
+						String sid = jsonSamplesA1.getString(a1);
+						
+						GetResponse samplequery = esClient.prepareGet("1000genomes_variants", "samples", sid)
+						        .execute()
+						        .actionGet();
+						Map<String, Object> sampleResult = samplequery.getSource();	
+						samplesA1.add(new Sample(new JSONObject(sampleResult), alt));
+					}
+				}
 			}
 		}
+		//List<T> intersect = list1.stream().filter(list2::contains).collect(Collectors.toList());
+		
 		BeanItemContainer<Alternative> altBean = new BeanItemContainer<Alternative>(Alternative.class, alternatives);
 		BeanItemContainer<SnpeffAnnotation> saBean = new BeanItemContainer<SnpeffAnnotation>(SnpeffAnnotation.class, snpeffAnnotations);
+		BeanItemContainer<Sample> sampleA1Bean = new BeanItemContainer<Sample>(Sample.class, samplesA1);
 		
 		Grid altTable = new Grid(altBean);
-		altTable.setCaption("Variant Alternatives");
+		altTable.setCaption("Variant Alternatives (please choose one)");
 		altTable.setHeightByRows(altCount);
 		altTable.setHeightMode(HeightMode.ROW);
 		altTable.setColumnOrder("alternateBases", "alleleCount");
@@ -147,9 +165,19 @@ public class QdataminerUI extends UI {
 	    saTable.setWidth("100%");
 	    saTable.getColumn("featureID").setRenderer(new HtmlRenderer());
 	    saTable.getColumn("geneID").setRenderer(new HtmlRenderer());
+	    
+	    Grid sampleA1Table = new Grid(sampleA1Bean);
+	    sampleA1Table.setCaption("Samples Allele 1");
+	    sampleA1Table.setWidth("100%");
+	    sampleA1Table.removeColumn("alternativeBases");
+	    sampleA1Table.removeColumn("alternative");
+	    sampleA1Table.setColumnOrder("sampleID","familyID","gender","population", "superPopulation",
+	    						     "relationship", "maternalID", "paternalID", "children", "siblings", 
+	    						     "secondOrders", "thirdOrders", "comments");
 		
 		TabSheet annoSampleTabs = new TabSheet();
 		annoSampleTabs.setVisible(false);
+		// This is shit... there must be another way
 		annoSampleTabs.setHeight("1000px");
 		/*
 		 * Build layout
@@ -168,7 +196,8 @@ public class QdataminerUI extends UI {
 				InfoAltAnnoBox.addComponent(altSnpeffBox);
 				altSnpeffBox.addComponent(altTable);
 				altSnpeffBox.setExpandRatio(altTable,1);
-				annoSampleTabs.addComponent(saTable);
+				annoSampleTabs.addTab(saTable);
+				annoSampleTabs.addTab(sampleA1Table);
 				
 				InfoAltAnnoBox.setExpandRatio(variantInfoTree, 2);
 				InfoAltAnnoBox.setExpandRatio(altSnpeffBox, 8);
@@ -178,10 +207,10 @@ public class QdataminerUI extends UI {
 			resultMain.addComponent(InfoAltAnnoBox);
 		
 		//Close node when finished
-		/*
+		
 		esClient.close();
 		esNode.close();
-		*/
+		
 	
 		altTable.addSelectionListener(selectionEvent -> {
 			/*
@@ -192,6 +221,7 @@ public class QdataminerUI extends UI {
 		    Filter altFilter = new SimpleStringFilter("alternativeBases", selectedAlt.getAlternateBases(), true, false);
 		    saBean.removeAllContainerFilters();
 		    saBean.addContainerFilter(altFilter);
+		    sampleA1Bean.addContainerFilter(altFilter);
 		    saTable.setVisible(true);
 		    
 			annoSampleTabs.setVisible(true);

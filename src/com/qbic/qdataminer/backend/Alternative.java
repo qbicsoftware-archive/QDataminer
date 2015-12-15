@@ -1,4 +1,4 @@
-package backend;
+package com.qbic.qdataminer.backend;
 
 import org.json.JSONObject;
 

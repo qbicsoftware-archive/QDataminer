@@ -1,4 +1,4 @@
-package backend;
+package com.qbic.qdataminer.backend;
 
 import org.json.JSONObject;
 
@@ -28,58 +28,26 @@ public class SnpeffAnnotation {
     
     
     public SnpeffAnnotation (JSONObject sa, Alternative alt){
-    
-    	if (sa.has("Annotation")){
-    		this.annotation = sa.getString("Annotation");	
-    	}
-    	if (sa.has("Annotation_Impact")){
-    		this.annotationImpact = sa.getString("Annotation_Impact");
-    	}
-    	if (sa.has("Gene_Name")){
-    		this.geneName = sa.getString("Gene_Name");
-    	}
-    	if (sa.has("Gene_ID")){
-    		this.geneID = sa.getString("Gene_ID");
-    	}
-    	if (sa.has("Feature_Type")){
-    		this.featureType = sa.getString("Feature_Type");
-    	}
-    	if (sa.has("Feature_ID")){
-    		this.featureID = sa.getString("Feature_ID");
-    	}
-    	if (sa.has("Transcript_BioType")){
-    		this.transcriptBiotype = sa.getString("Transcript_BioType");
-    	}
-    	if (sa.has("Rank")){
-    		this.exonIntronRankCount = sa.getString("Rank");
-    	}
-    	if (sa.has("HGVS_c")){
-    		this.HGVSc = sa.getString("HGVS_c");
-    	}
-    	if (sa.has("HGVS_p")){
-    		this.HGVSp = sa.getString("HGVS_p");
-    	}
-    	if (sa.has("Mutation")){
-    		this.mutation = sa.getString("Mutation");
-    	}
-    	if (sa.has("cDNA_pos_cDNA_length")){
-    		this.cdnaPosLength = sa.getString("cDNA_pos_cDNA_length");
-    	}
-    	if (sa.has("CDS_pos_CDS_length")){
-    		this.cdsPosLength = sa.getString("CDS_pos_CDS_length");
-    	}
-    	if (sa.has("AA_pos_AA_length")){
-    		this.aaPosLength = sa.getString("AA_pos_AA_length");
-    	}
-    	if (sa.has("Distance")){
-    		this.distance = sa.getLong("Distance");
-    	}
-    	if (sa.has("ERRORS_WARNINGS_INFO")){
-    		this.errors = sa.getString("ERRORS_WARNINGS_INFO");
-    	}
+		this.annotation = sa.optString("Annotation");	
+		this.annotationImpact = sa.optString("Annotation_Impact");
+		this.geneName = sa.optString("Gene_Name");
+		this.geneID = sa.optString("Gene_ID");
+		this.featureType = sa.optString("Feature_Type");
+		this.featureID = sa.optString("Feature_ID");
+		this.transcriptBiotype = sa.optString("Transcript_BioType");
+		this.exonIntronRankCount = sa.optString("Rank");
+		this.HGVSc = sa.optString("HGVS_c");
+		this.HGVSp = sa.optString("HGVS_p");
+		this.mutation = sa.optString("Mutation");
+		this.cdnaPosLength = sa.optString("cDNA_pos_cDNA_length");
+		this.cdsPosLength = sa.optString("CDS_pos_CDS_length");
+		this.aaPosLength = sa.optString("AA_pos_AA_length");
+		if (sa.has("Distance")){
+			this.distance = sa.getLong("Distance");	
+		}
+		this.errors = sa.optString("ERRORS_WARNINGS_INFO");
     	this.alternative = alt;
-    	this.alternativeBases = alt.getAlternateBases();
-    	
+    	this.alternativeBases = alt.getAlternateBases();    	
     }
     
     /*
