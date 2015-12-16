@@ -37,7 +37,11 @@ import static org.elasticsearch.node.NodeBuilder.*;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.json.*;
 
@@ -55,7 +59,7 @@ public class QdataminerUI extends UI {
 		
 		getElasticsearchConnection();
 		
-		GetResponse response = esClient.prepareGet("1000genomes_variants", "variants", "Y_2655180_G_A")
+		GetResponse response = esClient.prepareGet("1000genomes_variants", "variants", "21_45719908_G_A")
 		        .execute()
 		        .actionGet();
 		Map<String, Object> result = response.getSource();
@@ -66,6 +70,8 @@ public class QdataminerUI extends UI {
 		/*
 		 * Visualize resulting variant
 		 */		
+		final VerticalLayout resultMain = new VerticalLayout();
+		
 		Tree variantInfoTree = new Tree("Variant Data");
 		variantInfoTree.addItem("Details");
 		variantInfoTree.setSelectable(false);
@@ -97,15 +103,17 @@ public class QdataminerUI extends UI {
 		addElementToSpecificBranch(variantInfoTree, var.getCofIntervEndImperciseWithLabel(), "Additional Information");
 		addElementToSpecificBranch(variantInfoTree, var.getSourceWithLabel(), "Additional Information");
 
-		// Iterate through the alternatives and build alternatives, snpeffannno containers
+		// Iterate through the alternatives and build alternatives, snpeffannno, samples containers
 		Collection<Alternative> alternatives = new ArrayList<Alternative>();
 		Collection<SnpeffAnnotation> snpeffAnnotations = new ArrayList<SnpeffAnnotation>();
 		Collection<Sample> samplesA1 = new ArrayList<Sample>();
-		Integer altCount = 0;
-		Integer snpeffCount = 0;
+		Collection<Sample> samplesA2 = new ArrayList<Sample>();
+		
+		Map<String, List<String>> intersectionPerAlt = new HashMap<String, List<String>>();
 		if (jsonResult.has("Alternates")){
 			JSONArray jsonAlts = jsonResult.getJSONArray("Alternates");
-			altCount = jsonAlts.length();
+			
+			// Loop over all alternatives
 			for(int a = 0; a < jsonAlts.length(); a++) {
 				JSONObject jsonAlt = jsonAlts.getJSONObject(a);
 				Alternative alt = new Alternative(jsonAlt, var);
@@ -113,38 +121,61 @@ public class QdataminerUI extends UI {
 				
 				// Parse annotations
 				if (jsonAlt.has("SnpEff_annotation")){
-					snpeffCount = 0;
 					JSONArray jsonSnpeffAnnos = jsonAlt.getJSONArray("SnpEff_annotation");
-					snpeffCount = jsonSnpeffAnnos.length();
 					for(int s = 0; s < jsonSnpeffAnnos.length(); s++) {
 						JSONObject jsonSnpeffAnno = jsonSnpeffAnnos.getJSONObject(s);
 						snpeffAnnotations.add(new SnpeffAnnotation(jsonSnpeffAnno, alt)); 
 					}
 				}
 				// Parse samples
+				ArrayList<String> sidsA1 = new ArrayList<String>();
 				if (jsonAlt.has("Samples_Allele1")){
 					JSONArray jsonSamplesA1 = jsonAlt.getJSONArray("Samples_Allele1");
 					for(int a1 = 0; a1 < jsonSamplesA1.length(); a1++) {
 						String sid = jsonSamplesA1.getString(a1);
+						sidsA1.add(sid);
 						
-						GetResponse samplequery = esClient.prepareGet("1000genomes_variants", "samples", sid)
+						// Query the samples
+						GetResponse samplequeryA1 = esClient.prepareGet("1000genomes_variants", "samples", sid)
 						        .execute()
 						        .actionGet();
-						Map<String, Object> sampleResult = samplequery.getSource();	
-						samplesA1.add(new Sample(new JSONObject(sampleResult), alt));
+						Map<String, Object> sampleResultA1 = samplequeryA1.getSource();
+						sampleResultA1.put("_id", samplequeryA1.getId());
+						samplesA1.add(new Sample(new JSONObject(sampleResultA1), alt));
 					}
+				}
+				ArrayList<String> sidsA2 = new ArrayList<String>();
+				if (jsonAlt.has("Samples_Allele2")){
+					JSONArray jsonSamplesA2 = jsonAlt.getJSONArray("Samples_Allele2");
+					for(int a2 = 0; a2 < jsonSamplesA2.length(); a2++) {
+						String sid = jsonSamplesA2.getString(a2);
+						sidsA2.add(sid);
+						
+						// Query the samples
+						GetResponse samplequeryA2 = esClient.prepareGet("1000genomes_variants", "samples", sid)
+						        .execute()
+						        .actionGet();
+						Map<String, Object> sampleResultA2 = samplequeryA2.getSource();
+						sampleResultA2.put("_id", samplequeryA2.getId());
+						samplesA2.add(new Sample(new JSONObject(sampleResultA2), alt));
+					}
+				
+				//Intersection of sample IDs for 3rd tab
+				List<String> intersect = sidsA1.stream().filter(sidsA2::contains).collect(Collectors.toList());
+				intersectionPerAlt.put(alt.getAlternateBases(), intersect);
 				}
 			}
 		}
-		//List<T> intersect = list1.stream().filter(list2::contains).collect(Collectors.toList());
 		
 		BeanItemContainer<Alternative> altBean = new BeanItemContainer<Alternative>(Alternative.class, alternatives);
 		BeanItemContainer<SnpeffAnnotation> saBean = new BeanItemContainer<SnpeffAnnotation>(SnpeffAnnotation.class, snpeffAnnotations);
 		BeanItemContainer<Sample> sampleA1Bean = new BeanItemContainer<Sample>(Sample.class, samplesA1);
+		BeanItemContainer<Sample> sampleA2Bean = new BeanItemContainer<Sample>(Sample.class, samplesA2);
+		
 		
 		Grid altTable = new Grid(altBean);
 		altTable.setCaption("Variant Alternatives (please choose one)");
-		altTable.setHeightByRows(altCount);
+		altTable.setHeightByRows(altBean.size());
 		altTable.setHeightMode(HeightMode.ROW);
 		altTable.setColumnOrder("alternateBases", "alleleCount");
 		altTable.removeColumn("variant");
@@ -154,8 +185,10 @@ public class QdataminerUI extends UI {
 	    Grid saTable = new Grid(saBean);
 	    saTable.setVisible(false);
 	    saTable.setCaption("SnpEff Annotations");
-	    saTable.setHeightByRows(snpeffCount);
-	    saTable.setHeightMode(HeightMode.ROW);
+	    if (saBean.size() <= 10){
+		    saTable.setHeightByRows(saBean.size());
+		    saTable.setHeightMode(HeightMode.ROW);	    	
+	    }
 	    saTable.setColumnOrder("annotation","annotationImpact","mutation","geneName", "geneID", "featureType", "featureID", "transcriptBiotype");
 	    saTable.getColumn("mutation").setWidth(100);
 	    saTable.getColumn("featureID").setWidth(200);
@@ -166,14 +199,38 @@ public class QdataminerUI extends UI {
 	    saTable.getColumn("featureID").setRenderer(new HtmlRenderer());
 	    saTable.getColumn("geneID").setRenderer(new HtmlRenderer());
 	    
-	    Grid sampleA1Table = new Grid(sampleA1Bean);
-	    sampleA1Table.setCaption("Samples Allele 1");
-	    sampleA1Table.setWidth("100%");
-	    sampleA1Table.removeColumn("alternativeBases");
-	    sampleA1Table.removeColumn("alternative");
-	    sampleA1Table.setColumnOrder("sampleID","familyID","gender","population", "superPopulation",
-	    						     "relationship", "maternalID", "paternalID", "children", "siblings", 
-	    						     "secondOrders", "thirdOrders", "comments");
+	    Grid sampleA1Table = new Grid();
+	    if (sampleA1Bean.size() != 0){
+	    	sampleA1Table.setContainerDataSource(sampleA1Bean);
+		    sampleA1Table.setCaption("Samples (1st Allele)");
+		    sampleA1Table.setWidth("100%");
+		    sampleA1Table.removeColumn("alternativeBases");
+		    sampleA1Table.removeColumn("alternative");
+		    sampleA1Table.setColumnOrder("sampleID","familyID","gender","population", "superPopulation",
+		    						     "relationship", "maternalID", "paternalID", "children", "siblings", 
+		    						     "secondOrders", "thirdOrders", "comments");
+		    if (sampleA1Bean.size() <= 10){
+		    	sampleA1Table.setHeightByRows(sampleA1Bean.size());
+		    	sampleA1Table.setHeightMode(HeightMode.ROW);		    	
+		    }
+	    }
+	    
+	    
+	    Grid sampleA2Table = new Grid();
+	    if (sampleA2Bean.size() != 0){
+		    sampleA2Table.setContainerDataSource(sampleA2Bean);
+		    sampleA2Table.setCaption("Samples (2nd Allele)");
+		    sampleA2Table.setWidth("100%");
+		    sampleA2Table.removeColumn("alternativeBases");
+		    sampleA2Table.removeColumn("alternative");
+		    sampleA2Table.setColumnOrder("sampleID","familyID","gender","population", "superPopulation",
+		    						     "relationship", "maternalID", "paternalID", "children", "siblings", 
+		    						     "secondOrders", "thirdOrders", "comments");
+		    if (sampleA2Bean.size() <= 10){
+		    	sampleA2Table.setHeightByRows(sampleA2Bean.size());
+		    	sampleA2Table.setHeightMode(HeightMode.ROW);		    	
+		    }
+	    }
 		
 		TabSheet annoSampleTabs = new TabSheet();
 		annoSampleTabs.setVisible(false);
@@ -182,7 +239,7 @@ public class QdataminerUI extends UI {
 		/*
 		 * Build layout
 		 */
-		final VerticalLayout resultMain = new VerticalLayout();
+		
 		resultMain.setMargin(true);
 		setContent(resultMain);
 			
@@ -197,8 +254,12 @@ public class QdataminerUI extends UI {
 				altSnpeffBox.addComponent(altTable);
 				altSnpeffBox.setExpandRatio(altTable,1);
 				annoSampleTabs.addTab(saTable);
-				annoSampleTabs.addTab(sampleA1Table);
-				
+				if (sampleA1Bean.size() != 0){
+					annoSampleTabs.addTab(sampleA1Table);	
+				}
+				if (sampleA2Bean.size() != 0){
+					annoSampleTabs.addTab(sampleA2Table);	
+				}
 				InfoAltAnnoBox.setExpandRatio(variantInfoTree, 2);
 				InfoAltAnnoBox.setExpandRatio(altSnpeffBox, 8);
 				
@@ -207,22 +268,68 @@ public class QdataminerUI extends UI {
 			resultMain.addComponent(InfoAltAnnoBox);
 		
 		//Close node when finished
+		closeElasticsearchConnection();
 		
-		esClient.close();
-		esNode.close();
-		
-	
+		/*
+		 * Listeners
+		 */
 		altTable.addSelectionListener(selectionEvent -> {
 			/*
 			 * Display snpEff-annotations when an alternative is selected
+			 * ==========================================================
 			 */
+			
 		    Alternative selectedAlt = (Alternative)(((SingleSelectionModel) altTable.getSelectionModel()).getSelectedRow());	
 		    
 		    Filter altFilter = new SimpleStringFilter("alternativeBases", selectedAlt.getAlternateBases(), true, false);
 		    saBean.removeAllContainerFilters();
 		    saBean.addContainerFilter(altFilter);
 		    sampleA1Bean.addContainerFilter(altFilter);
+		    sampleA2Bean.addContainerFilter(altFilter);
 		    saTable.setVisible(true);
+		   
+		    // Generate the intersection bean of allele1 and allele2
+		    // =====================================================
+		    
+		    Collection<Sample> samplesIntersect = new ArrayList<Sample>();
+		    for(Iterator<String> sids = intersectionPerAlt.get(selectedAlt.getAlternateBases()).iterator(); sids.hasNext();){
+		    	String sid = sids.next();				
+		    	Boolean found = false;
+				for(Iterator<Sample> s = samplesA1.iterator(); s.hasNext();){
+					Sample sample = s.next();
+					if (sample.getSampleID().equals(sid)){
+						samplesIntersect.add(sample);
+						found = true;
+					}
+				}
+				if (!found){
+					for(Iterator<Sample> s = samplesA2.iterator(); s.hasNext();){
+						Sample sample = s.next();
+						if (sample.getSampleID().equals(sid)){
+							samplesIntersect.add(sample);
+						}
+					}					
+				}
+		    }
+		    BeanItemContainer<Sample> sampleIntersectBean = new BeanItemContainer<Sample>(Sample.class, samplesIntersect);
+		    
+		    Grid sampleIntersectTable = new Grid();
+		    if (sampleIntersectBean.size() != 0){
+		    	sampleIntersectTable.setContainerDataSource(sampleIntersectBean);
+		    	sampleIntersectTable.setCaption("Samples (homogenous)");
+		    	sampleIntersectTable.setWidth("100%");
+		    	sampleIntersectTable.removeColumn("alternativeBases");
+		    	sampleIntersectTable.removeColumn("alternative");
+		    	sampleIntersectTable.setColumnOrder("sampleID","familyID","gender","population", "superPopulation",
+			    						     "relationship", "maternalID", "paternalID", "children", "siblings", 
+			    						     "secondOrders", "thirdOrders", "comments");
+			    if (sampleIntersectBean.size() <= 10){
+			    	sampleIntersectTable.setHeightByRows(sampleIntersectBean.size());
+			    	sampleIntersectTable.setHeightMode(HeightMode.ROW);		    	
+			    }
+
+				annoSampleTabs.addTab(sampleIntersectTable);
+		    }
 		    
 			annoSampleTabs.setVisible(true);
 		});
@@ -241,6 +348,14 @@ public class QdataminerUI extends UI {
 
 		esNode = nodeBuilder().client(true).settings(settings).clusterName("qsearch").node();
 		esClient = esNode.client();
+    }
+    
+    private void closeElasticsearchConnection() {
+    	/*
+    	 * Closes the connection to elasticsearch
+    	 */
+		esClient.close();
+		esNode.close();
     }
     
     private void addElementToSpecificBranch(Tree tree, String element, String branch) {
