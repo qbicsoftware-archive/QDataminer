@@ -70,7 +70,7 @@ public class QdataminerUI extends UI {
 		/*
 		 * Visualize resulting variant
 		 */		
-		final VerticalLayout resultMain = new VerticalLayout();
+		final VerticalLayout resultVariantLayout = new VerticalLayout();
 		
 		Tree variantInfoTree = new Tree("Variant Data");
 		variantInfoTree.addItem("Details");
@@ -181,6 +181,7 @@ public class QdataminerUI extends UI {
 		altTable.removeColumn("variant");
 		altTable.setSelectionMode(SelectionMode.SINGLE);
 		altTable.setWidth("100%");
+		altTable.setImmediate(true);
 		
 	    Grid saTable = new Grid(saBean);
 	    saTable.setVisible(false);
@@ -201,47 +202,27 @@ public class QdataminerUI extends UI {
 	    
 	    Grid sampleA1Table = new Grid();
 	    if (sampleA1Bean.size() != 0){
-	    	sampleA1Table.setContainerDataSource(sampleA1Bean);
+	    	formatSampleGrids(sampleA1Table, sampleA1Bean);
 		    sampleA1Table.setCaption("Samples (1st Allele)");
-		    sampleA1Table.setWidth("100%");
-		    sampleA1Table.removeColumn("alternativeBases");
-		    sampleA1Table.removeColumn("alternative");
-		    sampleA1Table.setColumnOrder("sampleID","familyID","gender","population", "superPopulation",
-		    						     "relationship", "maternalID", "paternalID", "children", "siblings", 
-		    						     "secondOrders", "thirdOrders", "comments");
-		    if (sampleA1Bean.size() <= 10){
-		    	sampleA1Table.setHeightByRows(sampleA1Bean.size());
-		    	sampleA1Table.setHeightMode(HeightMode.ROW);		    	
-		    }
 	    }
 	    
 	    
 	    Grid sampleA2Table = new Grid();
 	    if (sampleA2Bean.size() != 0){
-		    sampleA2Table.setContainerDataSource(sampleA2Bean);
+	    	formatSampleGrids(sampleA2Table, sampleA2Bean);
 		    sampleA2Table.setCaption("Samples (2nd Allele)");
-		    sampleA2Table.setWidth("100%");
-		    sampleA2Table.removeColumn("alternativeBases");
-		    sampleA2Table.removeColumn("alternative");
-		    sampleA2Table.setColumnOrder("sampleID","familyID","gender","population", "superPopulation",
-		    						     "relationship", "maternalID", "paternalID", "children", "siblings", 
-		    						     "secondOrders", "thirdOrders", "comments");
-		    if (sampleA2Bean.size() <= 10){
-		    	sampleA2Table.setHeightByRows(sampleA2Bean.size());
-		    	sampleA2Table.setHeightMode(HeightMode.ROW);		    	
-		    }
 	    }
 		
 		TabSheet annoSampleTabs = new TabSheet();
 		annoSampleTabs.setVisible(false);
 		// This is shit... there must be another way
-		annoSampleTabs.setHeight("1000px");
+		annoSampleTabs.setHeight("600px");
 		/*
 		 * Build layout
 		 */
 		
-		resultMain.setMargin(true);
-		setContent(resultMain);
+		resultVariantLayout.setMargin(true);
+		setContent(resultVariantLayout);
 			
 			final HorizontalLayout InfoAltAnnoBox = new HorizontalLayout();
 			
@@ -265,7 +246,7 @@ public class QdataminerUI extends UI {
 				
 				altSnpeffBox.addComponent(annoSampleTabs);
 			
-			resultMain.addComponent(InfoAltAnnoBox);
+			resultVariantLayout.addComponent(InfoAltAnnoBox);
 		
 		//Close node when finished
 		closeElasticsearchConnection();
@@ -278,8 +259,8 @@ public class QdataminerUI extends UI {
 			 * Display snpEff-annotations when an alternative is selected
 			 * ==========================================================
 			 */
-			
-		    Alternative selectedAlt = (Alternative)(((SingleSelectionModel) altTable.getSelectionModel()).getSelectedRow());	
+			altTable.markAsDirty();
+		    Alternative selectedAlt = (Alternative)(((SingleSelectionModel) altTable.getSelectionModel()).getSelectedRow());
 		    
 		    Filter altFilter = new SimpleStringFilter("alternativeBases", selectedAlt.getAlternateBases(), true, false);
 		    saBean.removeAllContainerFilters();
@@ -315,19 +296,8 @@ public class QdataminerUI extends UI {
 		    
 		    Grid sampleIntersectTable = new Grid();
 		    if (sampleIntersectBean.size() != 0){
-		    	sampleIntersectTable.setContainerDataSource(sampleIntersectBean);
+		    	formatSampleGrids(sampleIntersectTable, sampleIntersectBean);
 		    	sampleIntersectTable.setCaption("Samples (homogenous)");
-		    	sampleIntersectTable.setWidth("100%");
-		    	sampleIntersectTable.removeColumn("alternativeBases");
-		    	sampleIntersectTable.removeColumn("alternative");
-		    	sampleIntersectTable.setColumnOrder("sampleID","familyID","gender","population", "superPopulation",
-			    						     "relationship", "maternalID", "paternalID", "children", "siblings", 
-			    						     "secondOrders", "thirdOrders", "comments");
-			    if (sampleIntersectBean.size() <= 10){
-			    	sampleIntersectTable.setHeightByRows(sampleIntersectBean.size());
-			    	sampleIntersectTable.setHeightMode(HeightMode.ROW);		    	
-			    }
-
 				annoSampleTabs.addTab(sampleIntersectTable);
 		    }
 		    
@@ -367,6 +337,23 @@ public class QdataminerUI extends UI {
         	tree.setParent(element, branch);
         	tree.setChildrenAllowed(element, false);   		
     	}
+    }
+    
+    private void formatSampleGrids(Grid g, BeanItemContainer<Sample> s){
+    	/*
+    	 * Helper function for sample table formatting
+    	 */
+	    g.setContainerDataSource(s);
+	    g.setWidth("100%");
+	    g.removeColumn("alternativeBases");
+	    g.removeColumn("alternative");
+	    g.setColumnOrder("sampleID","familyID","gender","population", "superPopulation",
+	    						     "relationship", "maternalID", "paternalID", "children", "siblings", 
+	    						     "secondOrders", "thirdOrders", "comments");
+	    if (s.size() <= 10){
+	    	g.setHeightByRows(s.size());
+	    	g.setHeightMode(HeightMode.ROW);		    	
+	    }
     }
 	
 	
