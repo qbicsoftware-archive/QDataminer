@@ -8,32 +8,27 @@ import com.qbic.qdataminer.backend.Variant;
 import com.qbic.qdataminer.backend.Sample;
 
 import com.vaadin.annotations.Theme;
+import com.vaadin.annotations.Title;
 import com.vaadin.annotations.VaadinServletConfiguration;
 import com.vaadin.data.Container.Filter;
 import com.vaadin.data.util.BeanItemContainer;
 import com.vaadin.data.util.filter.SimpleStringFilter;
 import com.vaadin.server.VaadinRequest;
 import com.vaadin.server.VaadinServlet;
-import com.vaadin.ui.Alignment;
-import com.vaadin.ui.Button;
 import com.vaadin.ui.HorizontalLayout;
-import com.vaadin.ui.Button.ClickEvent;
-import com.vaadin.ui.Label;
-import com.vaadin.ui.TabSheet;
-import com.vaadin.ui.Tree;
-import com.vaadin.ui.Grid;
 import com.vaadin.ui.Grid.SelectionMode;
 import com.vaadin.ui.Grid.SingleSelectionModel;
-import com.vaadin.ui.UI;
 import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.renderers.HtmlRenderer;
+import com.vaadin.ui.themes.Reindeer;
+import com.vaadin.ui.*;
 import com.vaadin.shared.ui.grid.HeightMode;
 
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.*;
-import org.elasticsearch.node.Node;
-import static org.elasticsearch.node.NodeBuilder.*;
+import org.elasticsearch.common.transport.InetSocketTransportAddress;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -47,17 +42,37 @@ import org.json.*;
 
 @SuppressWarnings("serial")
 @Theme("qdataminer")
+@Title("Qdataminer")
 public class QdataminerUI extends UI {
 	
-	Node esNode;
 	Client esClient;
 
 	@Override
 	protected void init(VaadinRequest request) {
 		
-		//Connection to elasticsearch
-		
 		getElasticsearchConnection();
+			
+		final VerticalLayout mainLayout = new VerticalLayout();
+		Label globalHeading = new Label("QVM - The QBiC Variant Miner");
+		globalHeading.setStyleName(Reindeer.LABEL_H1);
+		mainLayout.addComponent(globalHeading);
+		
+		setContent(mainLayout);
+		mainLayout.setStyleName("blue");
+		mainLayout.setHeight("100%");
+		/*
+		 * Layout with search fields
+		 */
+		
+		final HorizontalLayout searchLayout = new HorizontalLayout();
+		searchLayout.setMargin(true);
+		SearchForm varQueryForm = new SearchForm();
+		
+		searchLayout.addComponent(varQueryForm);
+		searchLayout.addComponent(varQueryForm.getSearchResultTable());
+		mainLayout.addComponent(searchLayout);
+		
+		//Connection to elasticsearch
 		
 		GetResponse response = esClient.prepareGet("1000genomes_variants", "variants", "21_45719908_G_A")
 		        .execute()
@@ -188,7 +203,10 @@ public class QdataminerUI extends UI {
 	    saTable.setCaption("SnpEff Annotations");
 	    if (saBean.size() <= 10){
 		    saTable.setHeightByRows(saBean.size());
-		    saTable.setHeightMode(HeightMode.ROW);	    	
+		    saTable.setHeightMode(HeightMode.ROW);	
+	    }else{
+		    saTable.setHeightByRows(10);
+		    saTable.setHeightMode(HeightMode.ROW);		    	
 	    }
 	    saTable.setColumnOrder("annotation","annotationImpact","mutation","geneName", "geneID", "featureType", "featureID", "transcriptBiotype");
 	    saTable.getColumn("mutation").setWidth(100);
@@ -215,14 +233,13 @@ public class QdataminerUI extends UI {
 		
 		TabSheet annoSampleTabs = new TabSheet();
 		annoSampleTabs.setVisible(false);
-		// This is shit... there must be another way
-		annoSampleTabs.setHeight("600px");
+
 		/*
 		 * Build layout
 		 */
 		
 		resultVariantLayout.setMargin(true);
-		setContent(resultVariantLayout);
+		//setContent(resultVariantLayout);
 			
 			final HorizontalLayout InfoAltAnnoBox = new HorizontalLayout();
 			
@@ -239,7 +256,7 @@ public class QdataminerUI extends UI {
 					annoSampleTabs.addTab(sampleA1Table);	
 				}
 				if (sampleA2Bean.size() != 0){
-					annoSampleTabs.addTab(sampleA2Table);	
+					annoSampleTabs.addTab(sampleA2Table);
 				}
 				InfoAltAnnoBox.setExpandRatio(variantInfoTree, 2);
 				InfoAltAnnoBox.setExpandRatio(altSnpeffBox, 8);
@@ -247,6 +264,10 @@ public class QdataminerUI extends UI {
 				altSnpeffBox.addComponent(annoSampleTabs);
 			
 			resultVariantLayout.addComponent(InfoAltAnnoBox);
+		
+		mainLayout.addComponent(resultVariantLayout);
+		mainLayout.setExpandRatio(searchLayout, 1);
+		mainLayout.setExpandRatio(resultVariantLayout, 2);
 		
 		//Close node when finished
 		closeElasticsearchConnection();
@@ -310,14 +331,9 @@ public class QdataminerUI extends UI {
     	/*
     	 * Implements the connection to elasticsearch
     	 */
-        Settings settings = ImmutableSettings.settingsBuilder()
-		.put("http.enabled", "false")
-		.put("transport.tcp.port", "9306-9400")
-		.put("discovery.zen.ping.multicast.enabled", "false")
-		.putArray("discovery.zen.ping.unicast.hosts", "localhost:9300", "localhost:9301", "localhost:9302", "localhost:9303", "localhost:9304", "localhost:9305").build();
-
-		esNode = nodeBuilder().client(true).settings(settings).clusterName("qsearch").node();
-		esClient = esNode.client();
+    	Settings settings = ImmutableSettings.settingsBuilder()
+    	        .put("cluster.name", "qsearch").build();
+    	this.esClient = new TransportClient(settings).addTransportAddress(new InetSocketTransportAddress("localhost", 9300));
     }
     
     private void closeElasticsearchConnection() {
@@ -325,7 +341,6 @@ public class QdataminerUI extends UI {
     	 * Closes the connection to elasticsearch
     	 */
 		esClient.close();
-		esNode.close();
     }
     
     private void addElementToSpecificBranch(Tree tree, String element, String branch) {
@@ -352,7 +367,10 @@ public class QdataminerUI extends UI {
 	    						     "secondOrders", "thirdOrders", "comments");
 	    if (s.size() <= 10){
 	    	g.setHeightByRows(s.size());
-	    	g.setHeightMode(HeightMode.ROW);		    	
+	    	g.setHeightMode(HeightMode.ROW);
+	    }else{
+	    	g.setHeightByRows(10);
+	    	g.setHeightMode(HeightMode.ROW);
 	    }
     }
 	
