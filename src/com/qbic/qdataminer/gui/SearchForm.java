@@ -36,6 +36,7 @@ public class SearchForm extends FormLayout{
     private Button clear = new Button("Clear", this::clear);
     
     private Grid searchResultTable = new Grid();
+    private ArrayList<JSONObject> jsonResults;
     
 	private Client esClient;
 
@@ -67,6 +68,7 @@ public class SearchForm extends FormLayout{
     public void search(Button.ClickEvent event) {
     	
     	getElasticsearchConnection();
+    	jsonResults = new ArrayList<JSONObject>();
     	
     	BoolQueryBuilder bq = QueryBuilders.boolQuery();
  
@@ -109,6 +111,10 @@ public class SearchForm extends FormLayout{
     			result.put("_id", hit.getId());
     		}
     		JSONObject jsonResult = new JSONObject(result);
+    		
+    		//Save Search results for later use
+    		jsonResults.add(jsonResult);
+    		
     		Variant var = new Variant(jsonResult);
     		queriedVariants.add(var);
     	}
@@ -145,7 +151,8 @@ public class SearchForm extends FormLayout{
         return (QdataminerUI) super.getUI();
     }
     
-    private void getElasticsearchConnection() {
+    @SuppressWarnings("resource")
+	private void getElasticsearchConnection() {
     	/*
     	 * Implements the connection to elasticsearch
     	 */
@@ -167,6 +174,9 @@ public class SearchForm extends FormLayout{
     
 	public Grid getSearchResultTable() {
 		return searchResultTable;
+	}
+	public ArrayList<JSONObject> getJsonResults() {
+		return jsonResults;
 	}
 
 }
