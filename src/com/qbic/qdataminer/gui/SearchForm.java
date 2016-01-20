@@ -12,11 +12,13 @@ import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.action.count.CountResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
+import static java.lang.Math.toIntExact;
 
 import static org.elasticsearch.index.query.QueryBuilders.*;
 import org.json.*;
@@ -37,6 +39,7 @@ public class SearchForm extends FormLayout{
     
     private Grid searchResultTable = new Grid();
     private ArrayList<JSONObject> jsonResults;
+    private Label notFound = new Label("No variants could be found");
     
 	private Client esClient;
 
@@ -61,13 +64,17 @@ public class SearchForm extends FormLayout{
         HorizontalLayout actions = new HorizontalLayout(search, clear);
         
         searchResultTable.setVisible(false);
+        notFound.setVisible(false);
         
         addComponent(actions);
+        addComponent(notFound);
 	}
 	
     public void search(Button.ClickEvent event) {
     	
     	getElasticsearchConnection();
+    	notFound.setVisible(false);
+    	
     	jsonResults = new ArrayList<JSONObject>();
     	
     	BoolQueryBuilder bq = QueryBuilders.boolQuery();
@@ -93,15 +100,22 @@ public class SearchForm extends FormLayout{
     		}
     	}
     	
+    	CountResponse countRequest = esClient.prepareCount("1000genomes_variants")
+    	        .setTypes("variants")
+		    	.setQuery(bq)
+		        .execute()
+		        .actionGet();
+    	Integer found = toIntExact(countRequest.getCount());
+    	
     	SearchResponse searchRequest = esClient.prepareSearch("1000genomes_variants")
     	        .setTypes("variants")
     	        .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
 		    	.setQuery(bq)
-		    	.setFrom(0).setSize(10)
+		    	.setFrom(0).setSize(found)
+		    	//.addSort("Position", SortOrder.ASC)
 		        .execute()
-		        .actionGet();
+		        .actionGet(); 
     	
-    	Long found = searchRequest.getHits().getTotalHits();
     	String resultCaption = "Found " + found + " variants (make your selection)";
     	
     	Collection<Variant> queriedVariants = new ArrayList<Variant>();
@@ -120,18 +134,23 @@ public class SearchForm extends FormLayout{
     	}
     	BeanItemContainer<Variant> qVarBean = new BeanItemContainer<Variant>(Variant.class, queriedVariants);
     	
-    	searchResultTable.setContainerDataSource(qVarBean);
-    	searchResultTable.setColumns("chromosome","position","referenceBases");
-	    if (qVarBean.size() < 8){
-	    	searchResultTable.setHeightByRows(qVarBean.size());
-	    	searchResultTable.setHeightMode(HeightMode.ROW);
-	    }else{
-	    	searchResultTable.setHeightMode(HeightMode.ROW);
-	    	searchResultTable.setHeightByRows(8);
-	    }
-	    searchResultTable.setSelectionMode(SelectionMode.SINGLE);
-	    searchResultTable.setCaption(resultCaption);
-	    searchResultTable.setVisible(true);
+    	if (qVarBean.size() > 0){
+        	searchResultTable.setContainerDataSource(qVarBean);
+        	searchResultTable.setColumns("chromosome","position","referenceBases");
+    	    if (qVarBean.size() < 8){
+    	    	searchResultTable.setHeightByRows(qVarBean.size());
+    	    	searchResultTable.setHeightMode(HeightMode.ROW);
+    	    }else{
+    	    	searchResultTable.setHeightMode(HeightMode.ROW);
+    	    	searchResultTable.setHeightByRows(8);
+    	    }
+    	    searchResultTable.setSelectionMode(SelectionMode.SINGLE);
+    	    searchResultTable.setCaption(resultCaption);
+    	    searchResultTable.setVisible(true);	
+    	}else{
+    		notFound.setVisible(true);
+    		searchResultTable.setVisible(false);
+    	}
     	
 		//Close node when finished
 		closeElasticsearchConnection();	

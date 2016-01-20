@@ -25,6 +25,7 @@ import org.json.*;
 public class QdataminerUI extends UI {
 	
 	private VariantLayout lastVariantLayout = null;
+	private VariantLayout resultVariantLayout;
 
 	@Override
 	protected void init(VaadinRequest request) {
@@ -56,7 +57,6 @@ public class QdataminerUI extends UI {
 		/*
 		 * Listener
 		 */
-		
 		varQueryForm.getSearchResultTable().addSelectionListener(selectionEvent -> {
 			/*
 			 * Show the selected variant in detail
@@ -75,7 +75,7 @@ public class QdataminerUI extends UI {
 			
 			Variant selectedVariant = (Variant)(((SingleSelectionModel) varQueryForm.getSearchResultTable().getSelectionModel()).getSelectedRow());
 			
-			VariantLayout resultVariantLayout = null;
+			resultVariantLayout = null;
 			
 			for(Iterator<JSONObject> res = varQueryForm.getJsonResults().iterator(); res.hasNext();){
 				JSONObject curJson = res.next();

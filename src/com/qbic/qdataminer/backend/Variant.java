@@ -169,7 +169,15 @@ public class Variant {
 	}
 	
 	public String getAncestralAlleleWithLabel() {
-		return "Ancestral allele: " + ancestralAllele;
+		String [] split = ancestralAllele.split("\\|");
+		
+		JSONArray aa = new JSONArray();
+		for (int i = 0; i < split.length; i++) {
+			if (!split[i].trim().equals("")){
+				aa.put(split[i]);
+			}	
+		}
+		return "Ancestral allele: " + aa.join(",").replaceAll("\"", "");
 	}
 
 	public Long getTotalNrOfAlleles() {

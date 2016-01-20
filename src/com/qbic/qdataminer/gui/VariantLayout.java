@@ -157,7 +157,7 @@ public class VariantLayout extends VerticalLayout{
 	    saTable.setVisible(false);
 	    saTable.setCaption("SnpEff Annotations");
 	    if (saBean.size() <= 10){
-		    saTable.setHeightByRows(saBean.size());
+		    saTable.setHeightByRows(saBean.size()+1);
 		    saTable.setHeightMode(HeightMode.ROW);	
 	    }else{
 		    saTable.setHeightByRows(10);
@@ -204,7 +204,6 @@ public class VariantLayout extends VerticalLayout{
 				altSnpeffBox.setWidth("100%");
 				InfoAltAnnoBox.addComponent(altSnpeffBox);
 				altSnpeffBox.addComponent(altTable);
-				altSnpeffBox.setExpandRatio(altTable,1);
 				annoSampleTabs.addTab(saTable);
 				if (sampleA1Bean.size() != 0){
 					annoSampleTabs.addTab(sampleA1Table);	
@@ -216,8 +215,15 @@ public class VariantLayout extends VerticalLayout{
 				InfoAltAnnoBox.setExpandRatio(altSnpeffBox, 8);
 				
 				altSnpeffBox.addComponent(annoSampleTabs);
+				
+				altSnpeffBox.setExpandRatio(altTable,1);
+				altSnpeffBox.setExpandRatio(annoSampleTabs, 3);
+			
+			InfoAltAnnoBox.setMargin(true);
+			InfoAltAnnoBox.setSpacing(true);
 			
 			addComponent(InfoAltAnnoBox);
+			setExpandRatio(InfoAltAnnoBox, 1);
 			
 			/*
 			 * Listeners
@@ -312,7 +318,7 @@ public class VariantLayout extends VerticalLayout{
 	    						     "relationship", "maternalID", "paternalID", "children", "siblings", 
 	    						     "secondOrders", "thirdOrders", "comments");
 	    if (s.size() <= 10){
-	    	g.setHeightByRows(s.size());
+	    	g.setHeightByRows(s.size()+1);
 	    	g.setHeightMode(HeightMode.ROW);
 	    }else{
 	    	g.setHeightByRows(10);
