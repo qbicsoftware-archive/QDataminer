@@ -29,23 +29,24 @@ public class QdataminerUI extends UI {
 
 	@Override
 	protected void init(VaadinRequest request) {
-		
-		//getElasticsearchConnection();
 			
 		final VerticalLayout mainLayout = new VerticalLayout();
 		Label globalHeading = new Label("QVM - The QBiC Variant Miner");
-		globalHeading.setStyleName(Reindeer.LABEL_H1);
+		globalHeading.setStyleName("customh1");
 		mainLayout.addComponent(globalHeading);
 		
 		setContent(mainLayout);
 		mainLayout.setStyleName("blue");
 		mainLayout.setHeight("100%");
+		mainLayout.setMargin(true);
 		/*
 		 * Layout with search fields
 		 */
 		
 		final HorizontalLayout searchLayout = new HorizontalLayout();
+		searchLayout.setStyleName("layoutborder");
 		searchLayout.setMargin(true);
+		searchLayout.setWidth("100%");
 		SearchForm varQueryForm = new SearchForm();
 		
 		searchLayout.addComponent(varQueryForm);
@@ -84,7 +85,10 @@ public class QdataminerUI extends UI {
 				}
 			}
 
+			resultVariantLayout.setVisible(true);
+			resultVariantLayout.setStyleName("layoutborder");
 			mainLayout.addComponent(resultVariantLayout);
+			mainLayout.addComponent(new Label(""));
 			mainLayout.setExpandRatio(globalHeading, 1);
 			mainLayout.setExpandRatio(searchLayout, 7);
 			mainLayout.setExpandRatio(resultVariantLayout, 10);
@@ -93,6 +97,12 @@ public class QdataminerUI extends UI {
 		});
 	
 	}
+	
+    public void clearOnEmptySearch() {
+    	if (resultVariantLayout != null){
+    		resultVariantLayout.setVisible(false);    		
+    	}
+    }
 	
     //  Deployed as a Servlet or Portlet.
 	@WebServlet(value = "/*", asyncSupported = true)

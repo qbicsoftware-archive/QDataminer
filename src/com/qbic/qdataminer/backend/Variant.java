@@ -3,6 +3,9 @@ package com.qbic.qdataminer.backend;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import com.vaadin.server.ExternalResource;
+import com.vaadin.ui.Link;
+
 public class Variant {
 	
 	/*
@@ -138,6 +141,12 @@ public class Variant {
 	
 	public String getExternalIDWithLabel() {
 		return "External ID: " + externalId;
+	}
+	
+	public Link getExternalIDasLink(){
+		Link link = new Link(externalId, new ExternalResource("http://www.ncbi.nlm.nih.gov/projects/SNP/snp_ref.cgi?rs=" + externalId));
+		link.setTargetName("_blank");
+		return link;
 	}
 
 	public String getReferenceBases() {

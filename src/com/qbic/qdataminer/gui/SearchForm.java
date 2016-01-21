@@ -6,6 +6,7 @@ import com.vaadin.event.ShortcutAction;
 import com.vaadin.shared.ui.grid.HeightMode;
 import com.vaadin.ui.*;
 import com.vaadin.ui.Grid.SelectionMode;
+import com.vaadin.ui.themes.Reindeer;
 import com.vaadin.ui.themes.ValoTheme;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
@@ -29,6 +30,7 @@ import java.util.*;
 public class SearchForm extends FormLayout{
 	
 	// Variant specific search fields
+	private Label formHeading = new Label("Search for variants with:");
 	private ListSelect chromosome = new ListSelect("Chromosome:");
 	private TextField posFrom = new TextField("Position from:");
 	private TextField posTo = new TextField("Position to:");
@@ -51,8 +53,10 @@ public class SearchForm extends FormLayout{
         chromosome.addItems("1","2","3","4","5","6","7","8","9","10","11","12",
         		            "13","14","15","16","17","18","19","20","21","22","X","Y");
         chromosome.setRows(1);
+        formHeading.setStyleName("customh2");
         
         // Add the fields
+        addComponent(formHeading);
         addComponent(chromosome);
         addComponent(posFrom);
         addComponent(posTo);
@@ -74,6 +78,8 @@ public class SearchForm extends FormLayout{
     	
     	getElasticsearchConnection();
     	notFound.setVisible(false);
+    	
+    	searchResultTable.setSelectionMode(SelectionMode.NONE);
     	
     	jsonResults = new ArrayList<JSONObject>();
     	
@@ -107,16 +113,25 @@ public class SearchForm extends FormLayout{
 		        .actionGet();
     	Integer found = toIntExact(countRequest.getCount());
     	
+    	Integer upperBorder;
+    	
+    	String resultCaption;
+    	if (found <= 100){
+    		upperBorder = found;
+    		resultCaption = "Found " + found + " variants. Please make your selection.";
+    	}else{
+    		upperBorder = 100;
+    		resultCaption = "Found " + found + " variants(shown " + upperBorder +"). Please make your selection or restrict the parameters.";
+    	}
+    	
     	SearchResponse searchRequest = esClient.prepareSearch("1000genomes_variants")
     	        .setTypes("variants")
     	        .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
 		    	.setQuery(bq)
-		    	.setFrom(0).setSize(found)
+		    	.setFrom(0).setSize(upperBorder)
 		    	//.addSort("Position", SortOrder.ASC)
 		        .execute()
 		        .actionGet(); 
-    	
-    	String resultCaption = "Found " + found + " variants (make your selection)";
     	
     	Collection<Variant> queriedVariants = new ArrayList<Variant>();
     	for (SearchHit hit : searchRequest.getHits().getHits()){
@@ -148,8 +163,10 @@ public class SearchForm extends FormLayout{
     	    searchResultTable.setCaption(resultCaption);
     	    searchResultTable.setVisible(true);	
     	}else{
+    		// No finds -> Remove previous search results
     		notFound.setVisible(true);
     		searchResultTable.setVisible(false);
+    		getUI().clearOnEmptySearch();
     	}
     	
 		//Close node when finished
@@ -162,6 +179,8 @@ public class SearchForm extends FormLayout{
        	posFrom.clear();
        	posTo.clear();
        	mutation.clear();
+       	searchResultTable.setVisible(false);
+       	getUI().clearOnEmptySearch();
     }
 	
 

@@ -20,7 +20,7 @@ import com.vaadin.data.Container.Filter;
 import com.vaadin.data.util.BeanItemContainer;
 import com.vaadin.data.util.filter.SimpleStringFilter;
 import com.vaadin.shared.ui.grid.HeightMode;
-import com.vaadin.ui.Grid;
+import com.vaadin.ui.*;
 import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.TabSheet;
 import com.vaadin.ui.Tree;
@@ -39,13 +39,27 @@ public class VariantLayout extends VerticalLayout{
 		
 		var = new Variant(jsonResult);
 		
+		HorizontalLayout linktoID = new HorizontalLayout();
+		linktoID.setSpacing(true);
+		Label resultHeader = new Label();
+		resultHeader.setStyleName("customlink");
+		if (var.getExternalID() != null){
+			resultHeader.setValue("Selected Variant - External ID: ");
+			Link link = var.getExternalIDasLink();
+			link.setStyleName("customh2");
+			linktoID.addComponents(resultHeader, link);
+		}else{
+			resultHeader.setValue("Selected Variant:");
+			linktoID.addComponent(resultHeader);
+		}
+		
 		Tree variantInfoTree = new Tree("Variant Data");
 		variantInfoTree.addItem("Details");
 		variantInfoTree.setSelectable(false);
 		addElementToSpecificBranch(variantInfoTree, var.getVariantIDWithLabel(), "Details");
 		addElementToSpecificBranch(variantInfoTree, var.getChromosomeWithLabel(), "Details");
 		addElementToSpecificBranch(variantInfoTree, var.getPositionWithLabel(), "Details");
-		addElementToSpecificBranch(variantInfoTree, var.getExternalIDWithLabel(), "Details");
+		//addElementToSpecificBranch(variantInfoTree, var.getExternalIDWithLabel(), "Details");
 		addElementToSpecificBranch(variantInfoTree, var.getReferenceBasesWithLabel(), "Details");
 		addElementToSpecificBranch(variantInfoTree, var.getVariantTypesWithLabel(), "Details");
 		variantInfoTree.expandItem("Details");
@@ -153,6 +167,12 @@ public class VariantLayout extends VerticalLayout{
 		altTable.setWidth("100%");
 		altTable.setImmediate(true);
 		
+		/* Klappt nicht. Listener feuert nicht...
+		if (altBean.size() == 1){
+			altTable.select(altBean.getIdByIndex(0));
+		}
+		*/
+		
 	    Grid saTable = new Grid(saBean);
 	    saTable.setVisible(false);
 	    saTable.setCaption("SnpEff Annotations");
@@ -194,6 +214,7 @@ public class VariantLayout extends VerticalLayout{
 		 */
 		
 		setMargin(true);
+		addComponent(linktoID);
 			
 			final HorizontalLayout InfoAltAnnoBox = new HorizontalLayout();
 			
@@ -221,6 +242,8 @@ public class VariantLayout extends VerticalLayout{
 			
 			InfoAltAnnoBox.setMargin(true);
 			InfoAltAnnoBox.setSpacing(true);
+			altSnpeffBox.setMargin(true);
+			altSnpeffBox.setSpacing(true);
 			
 			addComponent(InfoAltAnnoBox);
 			setExpandRatio(InfoAltAnnoBox, 1);
