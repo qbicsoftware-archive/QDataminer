@@ -62,6 +62,7 @@ public class QdataminerUI extends UI {
 		searchLayout.setStyleName("layoutborder");
 		searchLayout.setMargin(true);
 		searchLayout.setWidth("100%");
+		searchLayout.setHeight("230px");
 		SearchForm varQueryForm = new SearchForm();
 		
 		searchLayout.addComponent(varQueryForm);
