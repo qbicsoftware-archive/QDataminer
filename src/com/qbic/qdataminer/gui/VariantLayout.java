@@ -41,6 +41,7 @@ import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.TabSheet;
 import com.vaadin.ui.Tree;
 import com.vaadin.ui.VerticalLayout;
+import com.vaadin.ui.Grid.Column;
 import com.vaadin.ui.Grid.SelectionMode;
 import com.vaadin.ui.Grid.SingleSelectionModel;
 import com.vaadin.ui.renderers.HtmlRenderer;
@@ -192,13 +193,10 @@ public class VariantLayout extends VerticalLayout{
 	    Grid saTable = new Grid(saBean);
 	    saTable.setVisible(false);
 	    saTable.setCaption("SnpEff Annotations");
-	    if (saBean.size() <= 10){
-		    saTable.setHeightByRows(saBean.size()+1);
-		    saTable.setHeightMode(HeightMode.ROW);	
-	    }else{
-		    saTable.setHeightByRows(10);
-		    saTable.setHeightMode(HeightMode.ROW);		    	
-	    }
+	    
+	    saTable.setHeightMode(HeightMode.CSS);
+	    saTable.setHeight("150px");
+	    
 	    saTable.setColumnOrder("annotation","annotationImpact","mutation","geneName", "geneID", "featureType", "featureID", "transcriptBiotype");
 	    saTable.getColumn("mutation").setWidth(100);
 	    saTable.getColumn("featureID").setWidth(200);
@@ -208,6 +206,10 @@ public class VariantLayout extends VerticalLayout{
 	    saTable.setWidth("100%");
 	    saTable.getColumn("featureID").setRenderer(new HtmlRenderer());
 	    saTable.getColumn("geneID").setRenderer(new HtmlRenderer());
+
+        for (Column c : saTable.getColumns()) {
+        	c.setHidable(true);
+        }
 	    
 	    Grid sampleA1Table = new Grid();
 	    if (sampleA1Bean.size() != 0){
@@ -254,7 +256,7 @@ public class VariantLayout extends VerticalLayout{
 				altSnpeffBox.addComponent(annoSampleTabs);
 				
 				altSnpeffBox.setExpandRatio(altTable,1);
-				altSnpeffBox.setExpandRatio(annoSampleTabs, 3);
+				altSnpeffBox.setExpandRatio(annoSampleTabs, 5);
 			
 			InfoAltAnnoBox.setMargin(true);
 			InfoAltAnnoBox.setSpacing(true);
@@ -263,6 +265,7 @@ public class VariantLayout extends VerticalLayout{
 			
 			addComponent(InfoAltAnnoBox);
 			setExpandRatio(InfoAltAnnoBox, 1);
+			setMargin(true);
 			
 			/*
 			 * Listeners
@@ -350,19 +353,21 @@ public class VariantLayout extends VerticalLayout{
     	 * Helper function for sample table formatting
     	 */
 	    g.setContainerDataSource(s);
-	    g.setWidth("100%");
+	    //g.setWidth("100%");
+	    g.setSizeFull();
 	    g.removeColumn("alternativeBases");
 	    g.removeColumn("alternative");
 	    g.setColumnOrder("sampleID","familyID","gender","population", "superPopulation",
 	    						     "relationship", "maternalID", "paternalID", "children", "siblings", 
 	    						     "secondOrders", "thirdOrders", "comments");
-	    if (s.size() <= 10){
-	    	g.setHeightByRows(s.size()+1);
-	    	g.setHeightMode(HeightMode.ROW);
-	    }else{
-	    	g.setHeightByRows(10);
-	    	g.setHeightMode(HeightMode.ROW);
-	    }
+	    
+	    g.setHeightMode(HeightMode.CSS);
+	    g.setHeight("150px");
+	    
+	    
+        for (Column c : g.getColumns()) {
+        	c.setHidable(true);
+        }
     }
     
     @SuppressWarnings("resource")
