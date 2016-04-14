@@ -324,7 +324,7 @@ public class VariantLayout extends VerticalLayout{
 			    Grid sampleIntersectTable = new Grid();
 			    if (sampleIntersectBean.size() != 0){
 			    	formatSampleGrids(sampleIntersectTable, sampleIntersectBean);
-			    	sampleIntersectTable.setCaption("Samples (homogenous)");
+			    	sampleIntersectTable.setCaption("Samples (homozygous)");
 					annoSampleTabs.addTab(sampleIntersectTable);
 			    }
 			    
